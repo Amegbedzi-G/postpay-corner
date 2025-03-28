@@ -26,6 +26,10 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Admin credentials
+const ADMIN_EMAIL = "admin@example.com";
+const ADMIN_PASSWORD = "admin123";
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,21 +57,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // In a real app, this would be an API call
       await new Promise((resolve) => setTimeout(resolve, 500));
       
-      const mockUser: User = {
-        id: "1",
-        username: email.split("@")[0],
-        email,
-        isAdmin: email.includes("admin"),
-        balance: 100,
-        avatar: "https://ui-avatars.com/api/?name=" + email.split("@")[0],
-        isSubscribed: false,
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem("user", JSON.stringify(mockUser));
+      // Check for admin credentials
+      if (email === ADMIN_EMAIL) {
+        // For admin, we check the specific password
+        if (password !== ADMIN_PASSWORD) {
+          throw new Error("Invalid admin password");
+        }
+        
+        const mockUser: User = {
+          id: "admin1",
+          username: "Admin",
+          email,
+          isAdmin: true,
+          balance: 1000, // Higher balance for admin
+          avatar: "https://ui-avatars.com/api/?name=Admin",
+          isSubscribed: true,
+        };
+        
+        setUser(mockUser);
+        localStorage.setItem("user", JSON.stringify(mockUser));
+      } else {
+        // For regular users, we just check if password meets length requirements
+        if (password.length < 6) {
+          throw new Error("Password must be at least 6 characters");
+        }
+        
+        const mockUser: User = {
+          id: Date.now().toString(),
+          username: email.split("@")[0],
+          email,
+          isAdmin: false,
+          balance: 100,
+          avatar: "https://ui-avatars.com/api/?name=" + email.split("@")[0],
+          isSubscribed: false,
+        };
+        
+        setUser(mockUser);
+        localStorage.setItem("user", JSON.stringify(mockUser));
+      }
     } catch (error) {
       console.error("Login failed:", error);
-      throw new Error("Login failed");
+      throw error;
     } finally {
       setIsLoading(false);
     }

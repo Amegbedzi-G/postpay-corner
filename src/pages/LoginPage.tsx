@@ -47,7 +47,8 @@ const LoginPage = () => {
       toast.success("Login successful");
       navigate("/");
     } catch (error) {
-      toast.error("Login failed. Please check your credentials.");
+      const errorMessage = error instanceof Error ? error.message : "Login failed. Please check your credentials.";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -115,7 +116,7 @@ const LoginPage = () => {
             </Link>
           </p>
           <p className="text-xs mt-2 text-muted-foreground">
-            Hint: Use "admin@example.com" for admin access
+            Hint: Use "admin@example.com" with password "admin123" for admin access
           </p>
         </div>
       </div>

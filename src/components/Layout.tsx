@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Outlet, useLocation } from "react-router-dom";
 
 export function Layout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const location = useLocation();
   
   // Don't show the bottom navbar on the admin page

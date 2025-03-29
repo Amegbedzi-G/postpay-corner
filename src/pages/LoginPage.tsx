@@ -17,6 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email" }),
@@ -68,6 +70,17 @@ const LoginPage = () => {
           </p>
         </div>
 
+        <Alert className="bg-muted">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 mt-1" />
+            <AlertDescription>
+              For admin access, use:<br />
+              Email: <strong>admin@example.com</strong><br />
+              Password: <strong>admin123</strong>
+            </AlertDescription>
+          </div>
+        </Alert>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -114,9 +127,6 @@ const LoginPage = () => {
             <Link to="/signup" className="text-primary hover:underline">
               Sign up
             </Link>
-          </p>
-          <p className="text-xs mt-2 text-muted-foreground">
-            Hint: Use "admin@example.com" with password "admin123" for admin access
           </p>
         </div>
       </div>

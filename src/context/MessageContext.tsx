@@ -14,6 +14,15 @@ export type Message = {
   tipAmount?: number;
 };
 
+export type PaymentRequest = {
+  id: string;
+  userId: string;
+  amount: number;
+  method: "PayPal" | "CashApp" | "ApplePay" | "BankTransfer" | "Crypto";
+  status: "pending" | "completed" | "rejected";
+  timestamp: Date;
+};
+
 export type Conversation = {
   id: string;
   participants: string[];
@@ -24,6 +33,7 @@ export type Conversation = {
 type MessageContextType = {
   conversations: Conversation[];
   messages: Record<string, Message[]>; // conversationId -> messages
+  paymentRequests: PaymentRequest[];
   loading: boolean;
   getConversation: (userId1: string, userId2: string) => Conversation | undefined;
   createConversation: (participants: string[]) => string;
@@ -40,6 +50,11 @@ type MessageContextType = {
   sendTip: (conversationId: string, messageId: string, amount: number) => void;
   getConversationMessages: (conversationId: string) => Message[];
   getUserConversations: (userId: string) => Conversation[];
+  requestPayment: (userId: string, amount: number, method: PaymentRequest["method"]) => void;
+  approvePaymentRequest: (requestId: string) => void;
+  rejectPaymentRequest: (requestId: string) => void;
+  getUserPaymentRequests: (userId: string) => PaymentRequest[];
+  getAllPaymentRequests: () => PaymentRequest[];
 };
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
@@ -80,20 +95,25 @@ const mockMessages: Record<string, Message[]> = {
   ],
 };
 
+const mockPaymentRequests: PaymentRequest[] = [];
+
 export const MessageProvider = ({ children }: { children: React.ReactNode }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Load from localStorage or use mock data
     const storedConversations = localStorage.getItem("conversations");
     const storedMessages = localStorage.getItem("messages");
+    const storedPaymentRequests = localStorage.getItem("paymentRequests");
 
     if (storedConversations && storedMessages) {
       try {
         const parsedConversations = JSON.parse(storedConversations);
         const parsedMessages = JSON.parse(storedMessages);
+        const parsedPaymentRequests = storedPaymentRequests ? JSON.parse(storedPaymentRequests) : [];
 
         // Convert timestamp strings back to Date objects
         const messagesWithDates: Record<string, Message[]> = {};
@@ -104,23 +124,32 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
           }));
         });
 
+        const paymentRequestsWithDates = parsedPaymentRequests.map((req: any) => ({
+          ...req,
+          timestamp: new Date(req.timestamp),
+        }));
+
         setConversations(parsedConversations);
         setMessages(messagesWithDates);
+        setPaymentRequests(paymentRequestsWithDates);
       } catch (error) {
         console.error("Failed to parse stored messages data:", error);
         setConversations(mockConversations);
         setMessages(mockMessages);
+        setPaymentRequests(mockPaymentRequests);
       }
     } else {
       setConversations(mockConversations);
       setMessages(mockMessages);
+      setPaymentRequests(mockPaymentRequests);
       localStorage.setItem("conversations", JSON.stringify(mockConversations));
       localStorage.setItem("messages", JSON.stringify(mockMessages));
+      localStorage.setItem("paymentRequests", JSON.stringify(mockPaymentRequests));
     }
     setLoading(false);
   }, []);
 
-  // Update localStorage whenever messages or conversations change
+  // Update localStorage whenever messages or conversations or payment requests change
   useEffect(() => {
     if (conversations.length > 0) {
       localStorage.setItem("conversations", JSON.stringify(conversations));
@@ -128,7 +157,10 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     if (Object.keys(messages).length > 0) {
       localStorage.setItem("messages", JSON.stringify(messages));
     }
-  }, [conversations, messages]);
+    if (paymentRequests.length > 0) {
+      localStorage.setItem("paymentRequests", JSON.stringify(paymentRequests));
+    }
+  }, [conversations, messages, paymentRequests]);
 
   const getConversation = (userId1: string, userId2: string) => {
     return conversations.find((conv) =>
@@ -248,6 +280,49 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     });
   };
 
+  const requestPayment = (userId: string, amount: number, method: PaymentRequest["method"]) => {
+    const newRequest: PaymentRequest = {
+      id: `req-${Date.now()}`,
+      userId,
+      amount,
+      method,
+      status: "pending",
+      timestamp: new Date(),
+    };
+
+    setPaymentRequests(prev => [...prev, newRequest]);
+  };
+
+  const approvePaymentRequest = (requestId: string) => {
+    setPaymentRequests(prev => 
+      prev.map(req => 
+        req.id === requestId 
+          ? { ...req, status: "completed" } 
+          : req
+      )
+    );
+  };
+
+  const rejectPaymentRequest = (requestId: string) => {
+    setPaymentRequests(prev => 
+      prev.map(req => 
+        req.id === requestId 
+          ? { ...req, status: "rejected" } 
+          : req
+      )
+    );
+  };
+
+  const getUserPaymentRequests = (userId: string) => {
+    return paymentRequests.filter(req => req.userId === userId);
+  };
+
+  const getAllPaymentRequests = () => {
+    return [...paymentRequests].sort((a, b) => 
+      b.timestamp.getTime() - a.timestamp.getTime()
+    );
+  };
+
   const getConversationMessages = (conversationId: string) => {
     return messages[conversationId] || [];
   };
@@ -263,6 +338,7 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
       value={{
         conversations,
         messages,
+        paymentRequests,
         loading,
         getConversation,
         createConversation,
@@ -272,6 +348,11 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
         sendTip,
         getConversationMessages,
         getUserConversations,
+        requestPayment,
+        approvePaymentRequest,
+        rejectPaymentRequest,
+        getUserPaymentRequests,
+        getAllPaymentRequests,
       }}
     >
       {children}

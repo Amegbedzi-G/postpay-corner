@@ -11,6 +11,8 @@ export type User = {
   isSubscribed: boolean;
   subscriptionType?: "weekly" | "monthly" | "yearly";
   subscriptionEndDate?: Date;
+  bio?: string;
+  name?: string;
 };
 
 type AuthContextType = {
@@ -22,6 +24,7 @@ type AuthContextType = {
   logout: () => void;
   updateUserBalance: (newBalance: number) => void;
   updateSubscription: (type: "weekly" | "monthly" | "yearly", endDate: Date) => void;
+  updateProfile: (updates: Partial<User>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,6 +75,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           balance: 1000, // Higher balance for admin
           avatar: "https://ui-avatars.com/api/?name=Admin",
           isSubscribed: true,
+          name: "Admin User",
+          bio: "Platform administrator and content creator.",
         };
         
         setUser(mockUser);
@@ -159,6 +164,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem("user", JSON.stringify(updatedUser));
     }
   };
+  
+  const updateProfile = (updates: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    }
+  };
 
   return (
     <AuthContext.Provider
@@ -171,6 +184,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         logout,
         updateUserBalance,
         updateSubscription,
+        updateProfile,
       }}
     >
       {children}

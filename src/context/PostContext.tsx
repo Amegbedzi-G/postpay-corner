@@ -29,6 +29,8 @@ type PostContextType = {
   posts: Post[];
   loading: boolean;
   addPost: (post: Omit<Post, "id" | "timestamp" | "likes" | "comments" | "purchasedBy">) => void;
+  updatePost: (postId: string, updates: Partial<Omit<Post, "id" | "timestamp" | "likes" | "comments" | "purchasedBy">>) => void;
+  deletePost: (postId: string) => void;
   toggleLike: (postId: string, userId: string) => void;
   addComment: (postId: string, userId: string, username: string, content: string) => void;
   purchasePost: (postId: string, userId: string) => void;
@@ -159,6 +161,21 @@ export const PostProvider = ({ children }: { children: React.ReactNode }) => {
 
     setPosts((prevPosts) => [newPost, ...prevPosts]);
   };
+  
+  const updatePost = (postId: string, updates: Partial<Omit<Post, "id" | "timestamp" | "likes" | "comments" | "purchasedBy">>) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((post) => {
+        if (post.id === postId) {
+          return { ...post, ...updates };
+        }
+        return post;
+      })
+    );
+  };
+  
+  const deletePost = (postId: string) => {
+    setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+  };
 
   const toggleLike = (postId: string, userId: string) => {
     setPosts((prevPosts) =>
@@ -230,6 +247,8 @@ export const PostProvider = ({ children }: { children: React.ReactNode }) => {
         posts,
         loading,
         addPost,
+        updatePost,
+        deletePost,
         toggleLike,
         addComment,
         purchasePost,

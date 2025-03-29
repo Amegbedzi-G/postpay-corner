@@ -85,6 +85,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { VerificationBadge } from "@/components/VerificationBadge";
 
 const AdminDashboardPage = () => {
   const { user, isAuthenticated, updateProfile } = useAuth();
@@ -320,12 +321,25 @@ const AdminDashboardPage = () => {
       </div>
 
       <div className="flex items-center space-x-4 mb-6">
-        <Avatar className="h-16 w-16">
-          <AvatarImage src={user.avatar} />
-          <AvatarFallback>{user.name?.[0] || user.username[0]}</AvatarFallback>
-        </Avatar>
+        <div className="relative group">
+          <Avatar className="h-16 w-16">
+            <AvatarImage src={user.avatar} />
+            <AvatarFallback>{user.name?.[0] || user.username[0]}</AvatarFallback>
+          </Avatar>
+          <Button 
+            variant="secondary" 
+            size="icon" 
+            className="absolute bottom-0 right-0 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => navigate("/profile")}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        </div>
         <div>
-          <h1 className="text-2xl font-bold">{user.name || user.username}</h1>
+          <div className="flex items-center">
+            <h1 className="text-2xl font-bold">{user.name || user.username}</h1>
+            <VerificationBadge tooltipText="Verified Admin" />
+          </div>
           <p className="text-muted-foreground">{user.bio || "Platform administrator"}</p>
         </div>
       </div>

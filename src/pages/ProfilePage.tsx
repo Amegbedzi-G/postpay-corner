@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { usePost } from "@/context/PostContext";
@@ -7,11 +7,18 @@ import { PostCard } from "@/components/PostCard";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VerificationBadge } from "@/components/VerificationBadge";
+import { ImageUploadComponent } from "@/components/ImageUploadComponent";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Pencil } from "lucide-react";
+import { toast } from "sonner";
 
 const ProfilePage = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateAvatar } = useAuth();
   const { posts } = usePost();
   const navigate = useNavigate();
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -28,18 +35,48 @@ const ProfilePage = () => {
     ? posts
     : posts.filter((post) => !post.isPremium || post.purchasedBy.includes(user.id));
 
+  const handleMediaAdded = (url: string, type: "image" | "video") => {
+    if (type === "video") {
+      toast.error("Please select an image for your profile picture");
+      return;
+    }
+    
+    setAvatarPreview(url);
+  };
+
+  const saveAvatar = () => {
+    if (avatarPreview) {
+      updateAvatar(avatarPreview);
+      setShowAvatarModal(false);
+      toast.success("Profile picture updated successfully");
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="bg-card rounded-xl shadow-md overflow-hidden mb-6">
         <div className="h-32 bg-gradient-to-r from-primary/20 to-accent/20"></div>
         <div className="px-6 pb-6">
           <div className="flex flex-col md:flex-row md:items-end -mt-16 mb-4">
-            <Avatar className="h-24 w-24 border-4 border-background">
-              <AvatarImage src={user.avatar} />
-              <AvatarFallback>{user.username[0]}</AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="h-24 w-24 border-4 border-background">
+                <AvatarImage src={user.avatar} />
+                <AvatarFallback>{user.username[0]}</AvatarFallback>
+              </Avatar>
+              <Button 
+                variant="secondary" 
+                size="icon" 
+                className="absolute bottom-0 right-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => setShowAvatarModal(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="mt-4 md:mt-0 md:ml-4 md:mb-2">
-              <h1 className="text-2xl font-bold">{user.username}</h1>
+              <div className="flex items-center">
+                <h1 className="text-2xl font-bold">{user.username}</h1>
+                {user.isVerified && <VerificationBadge size="md" />}
+              </div>
               <p className="text-muted-foreground">@{user.username.toLowerCase()}</p>
             </div>
           </div>
@@ -56,6 +93,7 @@ const ProfilePage = () => {
             {user.isSubscribed ? (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-premium/20 text-premium">
                 {user.subscriptionType} subscriber
+                {user.isVerified && <VerificationBadge size="sm" />}
               </span>
             ) : (
               <Button size="sm" variant="outline" onClick={() => navigate("/subscribe")}>
@@ -120,12 +158,55 @@ const ProfilePage = () => {
                       </p>
                     </div>
                   )}
+                  {user.bio && (
+                    <div>
+                      <h3 className="font-medium text-sm text-muted-foreground">
+                        Bio
+                      </h3>
+                      <p>{user.bio}</p>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
           </div>
         </div>
       </div>
+
+      {/* Profile Picture Upload Modal */}
+      <Dialog open={showAvatarModal} onOpenChange={setShowAvatarModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Profile Picture</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <ImageUploadComponent 
+              onMediaAdded={handleMediaAdded} 
+              acceptedTypes="image" 
+            />
+            
+            {avatarPreview && (
+              <div className="flex justify-center mt-4">
+                <Avatar className="h-32 w-32">
+                  <AvatarImage src={avatarPreview} />
+                  <AvatarFallback>{user.username[0]}</AvatarFallback>
+                </Avatar>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAvatarModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={saveAvatar} disabled={!avatarPreview}>
+              Save Picture
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect } from "react";
 
 export type Notification = {
@@ -30,6 +29,7 @@ export type User = {
   username: string;
   email: string;
   isAdmin: boolean;
+  isVerified: boolean;
   balance: number;
   avatar?: string;
   isSubscribed: boolean;
@@ -51,6 +51,7 @@ type AuthContextType = {
   updateUserBalance: (newBalance: number) => void;
   updateSubscription: (type: "weekly" | "monthly" | "yearly", endDate: Date) => void;
   updateProfile: (updates: Partial<User>) => void;
+  updateAvatar: (url: string) => void;
   addNotification: (notification: Omit<Notification, "id" | "createdAt" | "read">) => void;
   markNotificationAsRead: (notificationId: string) => void;
   getUnreadNotificationsCount: () => number;
@@ -129,6 +130,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           username: "Admin",
           email,
           isAdmin: true,
+          isVerified: true,
           balance: 1000, // Higher balance for admin
           avatar: "https://ui-avatars.com/api/?name=Admin",
           isSubscribed: true,
@@ -149,6 +151,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           username: email.split("@")[0],
           email,
           isAdmin: false,
+          isVerified: false,
           balance: 100,
           avatar: "https://ui-avatars.com/api/?name=" + email.split("@")[0],
           isSubscribed: false,
@@ -178,6 +181,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         username,
         email,
         isAdmin: email.includes("admin"),
+        isVerified: false,
         balance: 50, // Starting balance for new users
         avatar: "https://ui-avatars.com/api/?name=" + username,
         isSubscribed: false,
@@ -225,6 +229,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const updateProfile = (updates: Partial<User>) => {
     if (user) {
       const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    }
+  };
+  
+  const updateAvatar = (url: string) => {
+    if (user) {
+      const updatedUser = { ...user, avatar: url };
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
     }
@@ -346,6 +358,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         updateUserBalance,
         updateSubscription,
         updateProfile,
+        updateAvatar,
         addNotification,
         markNotificationAsRead,
         getUnreadNotificationsCount,

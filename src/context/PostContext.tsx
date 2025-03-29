@@ -246,17 +246,17 @@ export const PostProvider = ({ children }: { children: React.ReactNode }) => {
     // In a real app, this would upload to a server or cloud storage
     return new Promise((resolve, reject) => {
       try {
-        // Check if file is an image
-        if (!file.type.startsWith('image/')) {
-          throw new Error('File is not an image');
+        // Check if file is an image or video
+        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+          throw new Error('File is not an image or video');
         }
         
-        // Check file size (limit to 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error('File size exceeds 5MB limit');
+        // Check file size (limit to 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error('File size exceeds 10MB limit');
         }
         
-        // Create a local URL for the image
+        // Create a local URL for the file
         const reader = new FileReader();
         reader.onload = (e) => {
           if (e.target && e.target.result) {

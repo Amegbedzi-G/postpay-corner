@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -6,6 +5,7 @@ import { useMessage, PaymentRequest } from "@/context/MessageContext";
 import { usePost } from "@/context/PostContext";
 import { useWallet } from "@/context/WalletContext";
 import { Button } from "@/components/ui/button";
+import { ImageUploadComponent } from "@/components/ImageUploadComponent";
 import {
   Tabs,
   TabsContent,
@@ -105,24 +105,20 @@ const AdminDashboardPage = () => {
   const [isPPV, setIsPPV] = useState(false);
   const [price, setPrice] = useState("1.99");
   
-  // New post state
   const [postContent, setPostContent] = useState("");
-  const [postMediaUrl, setPostMediaUrl] = useState("");
+  const [postMedia, setPostMedia] = useState<{ type: "image" | "video", url: string } | null>(null);
   const [isPostPremium, setIsPostPremium] = useState(false);
   const [postPrice, setPostPrice] = useState("4.99");
   
-  // Edit post state
   const [selectedPost, setSelectedPost] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
-  const [editMediaUrl, setEditMediaUrl] = useState("");
+  const [editMedia, setEditMedia] = useState<{ type: "image" | "video", url: string } | null>(null);
   const [editIsPremium, setEditIsPremium] = useState(false);
   const [editPrice, setEditPrice] = useState("");
   
-  // Profile edit state
   const [name, setName] = useState(user?.name || "Admin");
   const [bio, setBio] = useState(user?.bio || "");
   
-  // Payment approval state
   const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<PaymentRequest | null>(null);
 
   useEffect(() => {
@@ -153,7 +149,6 @@ const AdminDashboardPage = () => {
       return;
     }
 
-    // Create/get conversation and send message
     const conversationId = createConversation([user.id, receiverId]);
     sendMessage(
       conversationId,
@@ -167,12 +162,10 @@ const AdminDashboardPage = () => {
     toast.success("Message sent successfully!");
     setShowNewMessageModal(false);
     
-    // Clear form
     setMessageContent("");
     setIsPPV(false);
     setPrice("1.99");
     
-    // Navigate to conversation
     navigate(`/messages/${conversationId}`);
   };
 
@@ -182,8 +175,8 @@ const AdminDashboardPage = () => {
       return;
     }
 
-    if (!postMediaUrl) {
-      toast.error("Please enter a media URL");
+    if (!postMedia) {
+      toast.error("Please add media to your post");
       return;
     }
 
@@ -192,18 +185,12 @@ const AdminDashboardPage = () => {
       return;
     }
 
-    // Create new post
     addPost({
       userId: user.id,
       username: user.username,
       userAvatar: user.avatar,
       content: postContent,
-      media: [
-        {
-          type: "image",
-          url: postMediaUrl,
-        },
-      ],
+      media: [postMedia],
       isPremium: isPostPremium,
       price: isPostPremium ? parseFloat(postPrice) : 0,
     });
@@ -211,7 +198,7 @@ const AdminDashboardPage = () => {
     toast.success("Post created successfully!");
     setShowNewPostModal(false);
     setPostContent("");
-    setPostMediaUrl("");
+    setPostMedia(null);
     setIsPostPremium(false);
     setPostPrice("4.99");
   };
@@ -224,8 +211,8 @@ const AdminDashboardPage = () => {
       return;
     }
 
-    if (!editMediaUrl) {
-      toast.error("Please enter a media URL");
+    if (!editMedia) {
+      toast.error("Please add media to your post");
       return;
     }
 
@@ -234,15 +221,9 @@ const AdminDashboardPage = () => {
       return;
     }
 
-    // Update the post
     updatePost(selectedPost, {
       content: editContent,
-      media: [
-        {
-          type: "image",
-          url: editMediaUrl,
-        },
-      ],
+      media: [editMedia],
       isPremium: editIsPremium,
       price: editIsPremium ? parseFloat(editPrice) : 0,
     });
@@ -272,10 +253,8 @@ const AdminDashboardPage = () => {
   const handleApprovePayment = () => {
     if (!selectedPaymentRequest) return;
     
-    // Add funds to user's wallet
     addFunds(selectedPaymentRequest.amount);
     
-    // Mark payment request as completed
     approvePaymentRequest(selectedPaymentRequest.id);
     
     toast.success(`Payment of $${selectedPaymentRequest.amount} approved and added to user's wallet!`);
@@ -293,7 +272,7 @@ const AdminDashboardPage = () => {
     
     setSelectedPost(postId);
     setEditContent(post.content);
-    setEditMediaUrl(post.media[0]?.url || "");
+    setEditMedia(post.media[0] || null);
     setEditIsPremium(post.isPremium);
     setEditPrice(post.price.toString());
     setShowEditPostModal(true);
@@ -310,6 +289,14 @@ const AdminDashboardPage = () => {
   };
   
   const pendingPaymentRequests = paymentRequests.filter(req => req.status === "pending");
+
+  const handleMediaAdded = (url: string, type: "image" | "video") => {
+    setPostMedia({ type, url });
+  };
+
+  const handleEditMediaAdded = (url: string, type: "image" | "video") => {
+    setEditMedia({ type, url });
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -739,7 +726,7 @@ const AdminDashboardPage = () => {
 
       {/* New Post Modal */}
       <Dialog open={showNewPostModal} onOpenChange={setShowNewPostModal}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Create New Post</DialogTitle>
             <DialogDescription>
@@ -759,16 +746,8 @@ const AdminDashboardPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="media-url">Media URL</Label>
-              <Input
-                id="media-url"
-                placeholder="Enter image or video URL"
-                value={postMediaUrl}
-                onChange={(e) => setPostMediaUrl(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Use a valid image URL (e.g., from Unsplash)
-              </p>
+              <Label>Media</Label>
+              <ImageUploadComponent onMediaAdded={handleMediaAdded} />
             </div>
 
             <div className="space-y-2 pt-2">
@@ -817,7 +796,7 @@ const AdminDashboardPage = () => {
       
       {/* Edit Post Modal */}
       <Dialog open={showEditPostModal} onOpenChange={setShowEditPostModal}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Post</DialogTitle>
             <DialogDescription>
@@ -837,13 +816,16 @@ const AdminDashboardPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-media-url">Media URL</Label>
-              <Input
-                id="edit-media-url"
-                placeholder="Enter image or video URL"
-                value={editMediaUrl}
-                onChange={(e) => setEditMediaUrl(e.target.value)}
+              <Label>Media</Label>
+              <ImageUploadComponent 
+                onMediaAdded={handleEditMediaAdded} 
+                acceptedTypes="both"
               />
+              {editMedia && (
+                <p className="text-xs text-muted-foreground">
+                  Upload a new file to replace the current {editMedia.type}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2 pt-2">

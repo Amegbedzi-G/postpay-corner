@@ -24,6 +24,7 @@ import SubscriptionPage from "./pages/SubscriptionPage";
 import AddPostPage from "./pages/AddPostPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import SettingsPage from "./pages/SettingsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
                         <Route path="add-post" element={<AddPostPage />} />
                         <Route path="admin" element={<AdminDashboardPage />} />
                         <Route path="settings" element={<SettingsPage />} />
+                        <Route path="notifications" element={<NotificationsPage />} />
                       </Route>
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/signup" element={<SignupPage />} />

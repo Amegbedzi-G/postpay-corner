@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect } from "react";
 
 export type Post = {
@@ -36,6 +35,7 @@ type PostContextType = {
   purchasePost: (postId: string, userId: string) => void;
   hasPurchased: (postId: string, userId: string) => boolean;
   getPost: (postId: string) => Post | undefined;
+  uploadImage: (file: File) => Promise<string>;
 };
 
 const PostContext = createContext<PostContextType | undefined>(undefined);
@@ -241,6 +241,43 @@ export const PostProvider = ({ children }: { children: React.ReactNode }) => {
     return posts.find((post) => post.id === postId);
   };
 
+  const uploadImage = async (file: File): Promise<string> => {
+    // This is a mock implementation that creates an object URL
+    // In a real app, this would upload to a server or cloud storage
+    return new Promise((resolve, reject) => {
+      try {
+        // Check if file is an image
+        if (!file.type.startsWith('image/')) {
+          throw new Error('File is not an image');
+        }
+        
+        // Check file size (limit to 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error('File size exceeds 5MB limit');
+        }
+        
+        // Create a local URL for the image
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target && e.target.result) {
+            // Return the data URL
+            resolve(e.target.result.toString());
+          } else {
+            reject(new Error('Failed to read file'));
+          }
+        };
+        
+        reader.onerror = () => {
+          reject(new Error('Failed to read file'));
+        };
+        
+        reader.readAsDataURL(file);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
   return (
     <PostContext.Provider
       value={{
@@ -254,6 +291,7 @@ export const PostProvider = ({ children }: { children: React.ReactNode }) => {
         purchasePost,
         hasPurchased,
         getPost,
+        uploadImage,
       }}
     >
       {children}

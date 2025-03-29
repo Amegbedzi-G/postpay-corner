@@ -13,9 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 export function TopNavbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, getUnreadNotificationsCount } = useAuth();
+  const unreadCount = user ? getUnreadNotificationsCount() : 0;
 
   return (
     <div className="top-navigation">
@@ -38,9 +40,14 @@ export function TopNavbar() {
               </Button>
             </Link>
 
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon" className="relative" asChild>
               <Link to="/notifications">
                 <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
               </Link>
             </Button>
 
@@ -68,6 +75,9 @@ export function TopNavbar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/wallet">Wallet</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/notifications">Notifications</Link>
                 </DropdownMenuItem>
                 {user.isAdmin && (
                   <DropdownMenuItem asChild>

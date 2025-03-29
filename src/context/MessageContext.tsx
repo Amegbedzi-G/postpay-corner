@@ -1,5 +1,5 @@
-
 import { createContext, useContext, useState, useEffect } from "react";
+import { useAuth } from "./AuthContext";
 
 export type Message = {
   id: string;
@@ -98,6 +98,7 @@ const mockMessages: Record<string, Message[]> = {
 const mockPaymentRequests: PaymentRequest[] = [];
 
 export const MessageProvider = ({ children }: { children: React.ReactNode }) => {
+  const { user, addNotification } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([]);
@@ -233,6 +234,28 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
         return conv;
       })
     );
+
+    // Notify admin if message is sent to them
+    if (receiverId === "admin1") {
+      addNotification?.({
+        userId: "admin1",
+        type: "message",
+        title: "New Message",
+        message: `You have a new message from ${senderId}`,
+        data: { conversationId, messageId: newMessage.id }
+      });
+    }
+    
+    // Also notify subscriber if they received a message from admin
+    if (senderId === "admin1" && user?.isSubscribed) {
+      addNotification?.({
+        userId: receiverId,
+        type: "message",
+        title: "New Creator Message",
+        message: "The creator sent you a new message",
+        data: { conversationId, messageId: newMessage.id }
+      });
+    }
   };
 
   const markAsRead = (conversationId: string, userId: string) => {
@@ -291,9 +314,31 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     };
 
     setPaymentRequests(prev => [...prev, newRequest]);
+    
+    // Notify admin about the new payment request
+    addNotification?.({
+      userId: "admin1", // Admin's ID
+      type: "payment_request",
+      title: "New Payment Request",
+      message: `User ${userId} requested a payment of $${amount.toFixed(2)} via ${method}`,
+      data: { requestId: newRequest.id }
+    });
   };
 
   const approvePaymentRequest = (requestId: string) => {
+    const request = paymentRequests.find(req => req.id === requestId);
+    
+    if (request) {
+      // Notify the user their payment request was approved
+      addNotification?.({
+        userId: request.userId,
+        type: "payment_request",
+        title: "Payment Request Approved",
+        message: `Your payment request for $${request.amount.toFixed(2)} has been approved`,
+        data: { requestId }
+      });
+    }
+    
     setPaymentRequests(prev => 
       prev.map(req => 
         req.id === requestId 
@@ -304,6 +349,19 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
   };
 
   const rejectPaymentRequest = (requestId: string) => {
+    const request = paymentRequests.find(req => req.id === requestId);
+    
+    if (request) {
+      // Notify the user their payment request was rejected
+      addNotification?.({
+        userId: request.userId,
+        type: "payment_request",
+        title: "Payment Request Rejected",
+        message: `Your payment request for $${request.amount.toFixed(2)} has been rejected`,
+        data: { requestId }
+      });
+    }
+    
     setPaymentRequests(prev => 
       prev.map(req => 
         req.id === requestId 

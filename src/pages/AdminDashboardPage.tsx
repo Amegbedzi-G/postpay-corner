@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -340,7 +339,7 @@ const AdminDashboardPage = () => {
         <div>
           <div className="flex items-center">
             <h1 className="text-2xl font-bold">{user.name || user.username}</h1>
-            <VerificationBadge tooltipText="Verified Admin" />
+            <VerificationBadge badgeType="admin" tooltipText="Verified Admin" />
           </div>
           <p className="text-muted-foreground">{user.bio || "Platform administrator"}</p>
         </div>

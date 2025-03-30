@@ -53,7 +53,10 @@ export const PaymentProofUpload = ({
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <ImageUploadComponent onMediaAdded={handleMediaAdded} acceptedTypes="image" />
+            <ImageUploadComponent 
+              onMediaAdded={handleMediaAdded} 
+              acceptedTypes={["image"]} 
+            />
             {screenshot && (
               <div className="mt-2 border rounded-md p-2">
                 <p className="text-xs text-muted-foreground mb-1">Preview:</p>

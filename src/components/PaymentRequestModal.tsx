@@ -65,13 +65,15 @@ export const PaymentRequestModal = ({
     const newRequestId = requestPayment(user.id, amountValue, method);
 
     // Add notification for admin
-    addNotification({
-      userId: "admin1", // Admin's ID
-      type: "payment_request",
-      title: "New Payment Request",
-      message: `${user.username} requested ${amountValue} via ${method}`,
-      data: { userId: user.id, amount: amountValue }
-    });
+    if (addNotification) {
+      addNotification({
+        userId: "admin1", // Admin's ID
+        type: "payment_request",
+        title: "New Payment Request",
+        message: `${user.username} requested ${amountValue} via ${method}`,
+        data: { userId: user.id, amount: amountValue }
+      });
+    }
 
     // Save request ID and show success alert
     setRequestId(newRequestId);

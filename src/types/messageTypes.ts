@@ -1,4 +1,3 @@
-
 export type MessageMedia = {
   type: "image" | "video" | "file";
   url: string;

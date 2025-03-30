@@ -388,7 +388,7 @@ const ConversationPage = () => {
             <PopoverContent className="w-72 p-2">
               <ImageUploadComponent 
                 onMediaAdded={handleMediaAdded}
-                acceptedTypes="all"
+                acceptedTypes="both"
               />
             </PopoverContent>
           </Popover>

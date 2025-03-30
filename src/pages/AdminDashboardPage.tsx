@@ -157,6 +157,7 @@ const AdminDashboardPage = () => {
       user.id,
       receiverId,
       messageContent,
+      isPPV ? undefined : media,
       isPPV,
       isPPV ? parseFloat(price) : 0
     );

@@ -45,6 +45,7 @@ const App = () => (
                       <Route path="/" element={<Layout />}>
                         <Route index element={<HomePage />} />
                         <Route path="profile" element={<ProfilePage />} />
+                        <Route path="profile/:username" element={<ProfilePage />} />
                         <Route path="post/:id" element={<PostDetailPage />} />
                         <Route path="wallet" element={<WalletPage />} />
                         <Route path="messages" element={<MessagesPage />} />

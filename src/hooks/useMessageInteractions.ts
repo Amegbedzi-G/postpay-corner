@@ -7,21 +7,13 @@ export const useMessageInteractions = (
   setConversations: React.Dispatch<React.SetStateAction<any[]>>,
   addNotification?: (notification: any) => void
 ) => {
-  const canSendMessage = (senderId: string, receiverId: string, user: any) => {
-    // Admin can always send messages
+  const canSendMessage = (senderId: string, receiverId: string) => {
     if (senderId === "admin1") return true;
     
-    // User can send message to admin if they're subscribed
     if (receiverId === "admin1") {
-      if (!user) return false;
-      
-      // Check if user has a conversation with admin
-      const existingConv = user.isAdmin ? true : user.isSubscribed;
-      
-      return existingConv;
+      return true;
     }
     
-    // Other users can message each other freely
     return true;
   };
 
@@ -34,11 +26,7 @@ export const useMessageInteractions = (
     isPPV = false,
     price = 0
   ) => {
-    // Using any here because we can't pass the entire Auth context
-    const user = { id: senderId, isSubscribed: true };
-    
-    // Check if sender can send a message to receiver
-    if (!canSendMessage(senderId, receiverId, user)) {
+    if (!canSendMessage(senderId, receiverId)) {
       return false;
     }
     
@@ -51,12 +39,11 @@ export const useMessageInteractions = (
       isPPV,
       price,
       isRead: false,
-      isUnlocked: !isPPV, // PPV messages start locked
+      isUnlocked: !isPPV,
       isPinned: false,
       timestamp: new Date(),
     };
 
-    // Update messages
     setMessages((prev) => {
       const conversationMessages = prev[conversationId] || [];
       return {
@@ -65,7 +52,6 @@ export const useMessageInteractions = (
       };
     });
 
-    // Update conversation with last message and unread count
     setConversations((prev) =>
       prev.map((conv) => {
         if (conv.id === conversationId) {
@@ -79,7 +65,6 @@ export const useMessageInteractions = (
       })
     );
 
-    // Notify admin if message is sent to them
     if (receiverId === "admin1" && addNotification) {
       addNotification({
         userId: "admin1",
@@ -90,8 +75,7 @@ export const useMessageInteractions = (
       });
     }
     
-    // Also notify subscriber if they received a message from admin
-    if (senderId === "admin1" && user.isSubscribed && addNotification) {
+    if (senderId === "admin1" && addNotification) {
       addNotification({
         userId: receiverId,
         type: "message",

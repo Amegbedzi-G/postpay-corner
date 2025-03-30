@@ -4,10 +4,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useMessage } from "@/context/MessageContext";
 import { useWallet } from "@/context/WalletContext";
+import { MessageMedia } from "@/types/messageTypes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Lock, Send, DollarSign } from "lucide-react";
+import { ArrowLeft, Lock, Send, DollarSign, Image } from "lucide-react";
+import { ImageUploadComponent } from "@/components/ImageUploadComponent";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -18,6 +20,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const ConversationPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +37,10 @@ const ConversationPage = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
   const [tipAmount, setTipAmount] = useState(5);
+  const [media, setMedia] = useState<MessageMedia[]>([]);
+  const [showMediaPopover, setShowMediaPopover] = useState(false);
+  const [isPPV, setIsPPV] = useState(false);
+  const [ppvPrice, setPpvPrice] = useState(5);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,15 +72,18 @@ const ConversationPage = () => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim()) {
+    if (newMessage.trim() || media.length > 0) {
       // Get receiver ID from the first message in the conversation
       const receiverId = messages.length > 0
         ? (messages[0].senderId === user.id ? messages[0].receiverId : messages[0].senderId)
         : "";
 
       if (receiverId) {
-        sendMessage(id, user.id, receiverId, newMessage);
+        sendMessage(id, user.id, receiverId, newMessage, media.length > 0 ? media : undefined, isPPV, ppvPrice);
         setNewMessage("");
+        setMedia([]);
+        setIsPPV(false);
+        setPpvPrice(5);
         
         // Scroll to bottom after sending
         setTimeout(() => {
@@ -79,6 +93,19 @@ const ConversationPage = () => {
         }, 100);
       }
     }
+  };
+
+  const handleMediaAdded = (url: string, type: "image" | "video" | "file" = "image") => {
+    const newMedia: MessageMedia = {
+      type,
+      url,
+    };
+    setMedia((prev) => [...prev, newMedia]);
+    setShowMediaPopover(false);
+  };
+
+  const handleRemoveMedia = (index: number) => {
+    setMedia((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleUnlockPPVMessage = (messageId: string, price: number) => {
@@ -210,7 +237,47 @@ const ConversationPage = () => {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-sm">{message.content}</p>
+                      {message.content && <p className="text-sm">{message.content}</p>}
+                      
+                      {/* Display media */}
+                      {message.media && message.media.length > 0 && (
+                        <div className="mt-2 space-y-2">
+                          {message.media.map((item, index) => (
+                            <div key={index}>
+                              {item.type === "image" && (
+                                <img 
+                                  src={item.url} 
+                                  alt="Message attachment" 
+                                  className="rounded max-h-60 max-w-full" 
+                                />
+                              )}
+                              {item.type === "video" && (
+                                <video 
+                                  src={item.url} 
+                                  controls 
+                                  className="rounded max-h-60 max-w-full"
+                                />
+                              )}
+                              {item.type === "file" && (
+                                <div className="flex items-center space-x-2 p-2 border rounded">
+                                  <span className="text-xs truncate">
+                                    {item.fileName || "Attachment"}
+                                  </span>
+                                  <a 
+                                    href={item.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-500"
+                                  >
+                                    Download
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between items-center text-xs opacity-70">
                         <span>{formatDate(message.timestamp)}</span>
                         {message.tipAmount && (
@@ -241,20 +308,106 @@ const ConversationPage = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Media preview */}
+      {media.length > 0 && (
+        <div className="p-2 border-t border-border">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {media.map((item, index) => (
+              <div key={index} className="relative">
+                {item.type === "image" && (
+                  <img 
+                    src={item.url} 
+                    alt="Attached media" 
+                    className="h-16 w-16 object-cover rounded"
+                  />
+                )}
+                {item.type === "video" && (
+                  <div className="h-16 w-16 bg-gray-100 flex items-center justify-center rounded">
+                    <span className="text-xs">Video</span>
+                  </div>
+                )}
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
+                  onClick={() => handleRemoveMedia(index)}
+                >
+                  &times;
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Message Input */}
       <form
         onSubmit={handleSendMessage}
-        className="p-4 border-t border-border flex space-x-2"
+        className="p-4 border-t border-border space-y-2"
       >
-        <Input
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1"
-        />
-        <Button type="submit" size="icon" disabled={!newMessage.trim()}>
-          <Send className="h-4 w-4" />
-        </Button>
+        {/* PPV options */}
+        {user.id === "admin1" && (
+          <div className="flex items-center space-x-2 text-sm mb-2">
+            <label className="flex items-center space-x-1">
+              <input
+                type="checkbox"
+                checked={isPPV}
+                onChange={(e) => setIsPPV(e.target.checked)}
+                className="rounded"
+              />
+              <span>Pay-per-view</span>
+            </label>
+            
+            {isPPV && (
+              <div className="flex items-center space-x-2">
+                <span>Price: $</span>
+                <Input
+                  type="number"
+                  min="1"
+                  step="0.5"
+                  value={ppvPrice}
+                  onChange={(e) => setPpvPrice(Number(e.target.value))}
+                  className="w-16 h-6 text-xs"
+                />
+              </div>
+            )}
+          </div>
+        )}
+        
+        <div className="flex space-x-2">
+          <Popover open={showMediaPopover} onOpenChange={setShowMediaPopover}>
+            <PopoverTrigger asChild>
+              <Button 
+                type="button" 
+                size="icon" 
+                variant="outline"
+              >
+                <Image className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-2">
+              <ImageUploadComponent 
+                onMediaAdded={handleMediaAdded}
+                acceptedTypes="all"
+              />
+            </PopoverContent>
+          </Popover>
+          
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1"
+          />
+          
+          <Button 
+            type="submit" 
+            size="icon" 
+            disabled={!newMessage.trim() && media.length === 0}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </form>
 
       {/* Payment Modal */}

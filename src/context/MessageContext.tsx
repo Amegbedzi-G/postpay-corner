@@ -1,15 +1,24 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 
+export type MessageMedia = {
+  type: "image" | "video" | "file";
+  url: string;
+  fileName?: string;
+  fileSize?: number;
+};
+
 export type Message = {
   id: string;
   senderId: string;
   receiverId: string;
   content: string;
+  media?: MessageMedia[];
   isPPV: boolean;
   price: number;
   isRead: boolean;
   isUnlocked: boolean;
+  isPinned?: boolean;
   timestamp: Date;
   tipAmount?: number;
 };
@@ -18,9 +27,11 @@ export type PaymentRequest = {
   id: string;
   userId: string;
   amount: number;
-  method: "PayPal" | "CashApp" | "ApplePay" | "BankTransfer" | "Crypto";
+  method: "PayPal" | "CashApp" | "Apple Pay" | "Bank Transfer" | "Crypto";
   status: "pending" | "completed" | "rejected";
   timestamp: Date;
+  paymentDetails?: string;
+  screenshot?: string;
 };
 
 export type Conversation = {
@@ -42,6 +53,7 @@ type MessageContextType = {
     senderId: string,
     receiverId: string,
     content: string,
+    media?: MessageMedia[],
     isPPV?: boolean,
     price?: number
   ) => void;
@@ -51,10 +63,14 @@ type MessageContextType = {
   getConversationMessages: (conversationId: string) => Message[];
   getUserConversations: (userId: string) => Conversation[];
   requestPayment: (userId: string, amount: number, method: PaymentRequest["method"]) => void;
-  approvePaymentRequest: (requestId: string) => void;
+  approvePaymentRequest: (requestId: string, paymentDetails?: string) => void;
   rejectPaymentRequest: (requestId: string) => void;
+  submitPaymentProof: (requestId: string, screenshot: string) => void;
   getUserPaymentRequests: (userId: string) => PaymentRequest[];
   getAllPaymentRequests: () => PaymentRequest[];
+  togglePinMessage: (conversationId: string, messageId: string) => void;
+  canSendMessage: (senderId: string, receiverId: string) => boolean;
+  updatePaymentDetails: (requestId: string, paymentDetails: string) => void;
 };
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
@@ -63,7 +79,7 @@ const MessageContext = createContext<MessageContextType | undefined>(undefined);
 const mockConversations: Conversation[] = [
   {
     id: "conv1",
-    participants: ["admin", "user1"],
+    participants: ["admin1", "user1"],
     unreadCount: 0,
   },
 ];
@@ -72,7 +88,7 @@ const mockMessages: Record<string, Message[]> = {
   conv1: [
     {
       id: "msg1",
-      senderId: "admin",
+      senderId: "admin1",
       receiverId: "user1",
       content: "Welcome to my page! Thanks for subscribing.",
       isPPV: false,
@@ -83,7 +99,7 @@ const mockMessages: Record<string, Message[]> = {
     },
     {
       id: "msg2",
-      senderId: "admin",
+      senderId: "admin1",
       receiverId: "user1",
       content: "Here's some exclusive content just for you!",
       isPPV: true,
@@ -192,23 +208,59 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     return newConversation.id;
   };
 
+  const canSendMessage = (senderId: string, receiverId: string) => {
+    // Admin can always send messages
+    if (senderId === "admin1") return true;
+    
+    // User can send message to admin if they're subscribed
+    if (receiverId === "admin1") {
+      const sender = user;
+      if (!sender) return false;
+      
+      // Allow the first message to be sent (to request subscription)
+      const existingConv = getConversation(senderId, receiverId);
+      if (!existingConv) return true;
+      
+      const convMessages = messages[existingConv.id] || [];
+      const userMessages = convMessages.filter(msg => msg.senderId === senderId);
+      
+      // If user has already sent more than one message, they need to be subscribed
+      if (userMessages.length > 1) {
+        return sender.isSubscribed;
+      }
+      
+      return true;
+    }
+    
+    // Other users can message each other freely
+    return true;
+  };
+
   const sendMessage = (
     conversationId: string,
     senderId: string,
     receiverId: string,
     content: string,
+    media?: MessageMedia[],
     isPPV = false,
     price = 0
   ) => {
+    // Check if sender can send a message to receiver
+    if (!canSendMessage(senderId, receiverId)) {
+      return false;
+    }
+    
     const newMessage: Message = {
       id: `msg-${Date.now()}`,
       senderId,
       receiverId,
       content,
+      media,
       isPPV,
       price,
       isRead: false,
       isUnlocked: !isPPV, // PPV messages start locked
+      isPinned: false,
       timestamp: new Date(),
     };
 
@@ -256,6 +308,8 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
         data: { conversationId, messageId: newMessage.id }
       });
     }
+    
+    return true;
   };
 
   const markAsRead = (conversationId: string, userId: string) => {
@@ -303,6 +357,18 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     });
   };
 
+  const togglePinMessage = (conversationId: string, messageId: string) => {
+    setMessages((prev) => {
+      const conversationMessages = prev[conversationId] || [];
+      const updatedMessages = conversationMessages.map((msg) =>
+        msg.id === messageId
+          ? { ...msg, isPinned: !msg.isPinned }
+          : msg
+      );
+      return { ...prev, [conversationId]: updatedMessages };
+    });
+  };
+
   const requestPayment = (userId: string, amount: number, method: PaymentRequest["method"]) => {
     const newRequest: PaymentRequest = {
       id: `req-${Date.now()}`,
@@ -323,12 +389,66 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
       message: `User ${userId} requested a payment of $${amount.toFixed(2)} via ${method}`,
       data: { requestId: newRequest.id }
     });
+    
+    return newRequest.id;
   };
 
-  const approvePaymentRequest = (requestId: string) => {
+  const updatePaymentDetails = (requestId: string, paymentDetails: string) => {
+    setPaymentRequests(prev => 
+      prev.map(req => 
+        req.id === requestId 
+          ? { ...req, paymentDetails } 
+          : req
+      )
+    );
+    
+    // Find the request to get the user ID
     const request = paymentRequests.find(req => req.id === requestId);
     
     if (request) {
+      // Notify the user that payment details have been added
+      addNotification?.({
+        userId: request.userId,
+        type: "payment_request",
+        title: "Payment Details Added",
+        message: `The admin has added payment details for your $${request.amount.toFixed(2)} request`,
+        data: { requestId }
+      });
+    }
+  };
+  
+  const submitPaymentProof = (requestId: string, screenshot: string) => {
+    setPaymentRequests(prev => 
+      prev.map(req => 
+        req.id === requestId 
+          ? { ...req, screenshot } 
+          : req
+      )
+    );
+    
+    // Notify admin about the payment proof
+    const request = paymentRequests.find(req => req.id === requestId);
+    
+    if (request) {
+      addNotification?.({
+        userId: "admin1",
+        type: "payment_request",
+        title: "Payment Proof Submitted",
+        message: `User ${request.userId} has submitted payment proof for $${request.amount.toFixed(2)}`,
+        data: { requestId }
+      });
+    }
+  };
+
+  const approvePaymentRequest = (requestId: string, paymentDetails?: string) => {
+    const request = paymentRequests.find(req => req.id === requestId);
+    
+    if (request) {
+      // Update payment details if provided
+      const updatedRequest = paymentDetails 
+        ? { ...request, paymentDetails, status: "completed" }
+        : { ...request, status: "completed" };
+        
       // Notify the user their payment request was approved
       addNotification?.({
         userId: request.userId,
@@ -337,15 +457,15 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
         message: `Your payment request for $${request.amount.toFixed(2)} has been approved`,
         data: { requestId }
       });
+      
+      setPaymentRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? updatedRequest
+            : req
+        )
+      );
     }
-    
-    setPaymentRequests(prev => 
-      prev.map(req => 
-        req.id === requestId 
-          ? { ...req, status: "completed" } 
-          : req
-      )
-    );
   };
 
   const rejectPaymentRequest = (requestId: string) => {
@@ -411,6 +531,10 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
         rejectPaymentRequest,
         getUserPaymentRequests,
         getAllPaymentRequests,
+        togglePinMessage,
+        canSendMessage,
+        updatePaymentDetails,
+        submitPaymentProof
       }}
     >
       {children}

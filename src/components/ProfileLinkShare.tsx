@@ -3,12 +3,14 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Share } from "lucide-react";
+import { Copy, Share, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export const ProfileLinkShare = () => {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
   
   if (!user) return null;
   
@@ -44,6 +46,10 @@ export const ProfileLinkShare = () => {
       copyToClipboard();
     }
   };
+
+  const viewProfile = () => {
+    navigate(`/profile/${username}`);
+  };
   
   return (
     <div className="flex flex-col space-y-2">
@@ -63,14 +69,24 @@ export const ProfileLinkShare = () => {
           {copied ? "Copied!" : "Copy"}
         </Button>
       </div>
-      <Button 
-        variant="secondary" 
-        onClick={shareProfile}
-        className="flex items-center"
-      >
-        <Share className="h-4 w-4 mr-2" />
-        Share Profile
-      </Button>
+      <div className="flex gap-2">
+        <Button 
+          variant="secondary" 
+          onClick={shareProfile}
+          className="flex items-center flex-1"
+        >
+          <Share className="h-4 w-4 mr-2" />
+          Share Profile
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={viewProfile}
+          className="flex items-center"
+        >
+          <ExternalLink className="h-4 w-4 mr-2" />
+          View
+        </Button>
+      </div>
     </div>
   );
 };

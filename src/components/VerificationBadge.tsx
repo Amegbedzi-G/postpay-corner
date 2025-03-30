@@ -22,9 +22,9 @@ export const VerificationBadge = ({
   
   // Different colors based on badge type
   const badgeColors = {
-    admin: "bg-purple-100 dark:bg-purple-900 text-purple-500",
-    verified: "bg-blue-100 dark:bg-blue-900 text-blue-500",
-    subscriber: "bg-green-100 dark:bg-green-900 text-green-500"
+    admin: "bg-green-100 dark:bg-green-900 text-green-500", // Admin badges are green
+    verified: "bg-blue-100 dark:bg-blue-900 text-blue-500", // User verified badges are blue
+    subscriber: "bg-purple-100 dark:bg-purple-900 text-purple-500"
   };
   
   return (

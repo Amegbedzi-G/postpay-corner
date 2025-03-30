@@ -339,7 +339,7 @@ const AdminDashboardPage = () => {
         <div>
           <div className="flex items-center">
             <h1 className="text-2xl font-bold">{user.name || user.username}</h1>
-            <VerificationBadge badgeType="admin" tooltipText="Verified Admin" />
+            <VerificationBadge badgeType="admin" tooltipText="Creator Account" />
           </div>
           <p className="text-muted-foreground">{user.bio || "Platform administrator"}</p>
         </div>

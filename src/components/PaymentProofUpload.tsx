@@ -55,7 +55,7 @@ export const PaymentProofUpload = ({
           <div className="space-y-2">
             <ImageUploadComponent 
               onMediaAdded={handleMediaAdded} 
-              acceptedTypes={["image"]} 
+              acceptedTypes="image" 
             />
             {screenshot && (
               <div className="mt-2 border rounded-md p-2">

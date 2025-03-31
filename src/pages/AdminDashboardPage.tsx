@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useMessage, PaymentRequest } from "@/context/MessageContext";
+import { useMessage, PaymentRequest, MessageMedia } from "@/context/MessageContext";
 import { usePost } from "@/context/PostContext";
 import { useWallet } from "@/context/WalletContext";
 import { Button } from "@/components/ui/button";
@@ -106,6 +106,7 @@ const AdminDashboardPage = () => {
   const [messageContent, setMessageContent] = useState("");
   const [isPPV, setIsPPV] = useState(false);
   const [price, setPrice] = useState("1.99");
+  const [messageMedia, setMessageMedia] = useState<MessageMedia[] | undefined>(undefined);
   
   const [postContent, setPostContent] = useState("");
   const [postMedia, setPostMedia] = useState<{ type: "image" | "video", url: string } | null>(null);
@@ -157,7 +158,7 @@ const AdminDashboardPage = () => {
       user.id,
       receiverId,
       messageContent,
-      isPPV ? undefined : media,
+      isPPV ? undefined : messageMedia,
       isPPV,
       isPPV ? parseFloat(price) : 0
     );
@@ -168,6 +169,7 @@ const AdminDashboardPage = () => {
     setMessageContent("");
     setIsPPV(false);
     setPrice("1.99");
+    setMessageMedia(undefined);
     
     navigate(`/messages/${conversationId}`);
   };
@@ -293,12 +295,8 @@ const AdminDashboardPage = () => {
   
   const pendingPaymentRequests = paymentRequests.filter(req => req.status === "pending");
 
-  const handleMediaAdded = (url: string, type: "image" | "video") => {
-    setPostMedia({ type, url });
-  };
-
-  const handleEditMediaAdded = (url: string, type: "image" | "video") => {
-    setEditMedia({ type, url });
+  const handleMessageMediaAdded = (url: string, type: "image" | "video") => {
+    setMessageMedia([{ type, url }]);
   };
 
   return (
@@ -699,11 +697,27 @@ const AdminDashboardPage = () => {
                 rows={4}
               />
             </div>
+            
+            {!isPPV && (
+              <div className="space-y-2">
+                <Label>Media (Optional)</Label>
+                <ImageUploadComponent onMediaAdded={handleMessageMediaAdded} />
+              </div>
+            )}
 
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="ppv">Pay-Per-View Content</Label>
-                <Switch id="ppv" checked={isPPV} onCheckedChange={setIsPPV} />
+                <Switch 
+                  id="ppv" 
+                  checked={isPPV} 
+                  onCheckedChange={(checked) => {
+                    setIsPPV(checked);
+                    if (checked) {
+                      setMessageMedia(undefined);
+                    }
+                  }} 
+                />
               </div>
               <p className="text-xs text-muted-foreground">
                 Require payment to view this message
